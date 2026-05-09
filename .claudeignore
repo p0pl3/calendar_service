@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+build
+*.log
+.cache
+.git
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.csv
+*.pdf
+*.docx
+.vscode
+.env
+venv
