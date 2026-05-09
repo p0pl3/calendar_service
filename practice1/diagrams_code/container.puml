@@ -1,0 +1,47 @@
+@startuml C4_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма контейнеров — Календарь событий
+
+Person(user, "Пользователь", "Физическое лицо, работающее с календарём")
+
+System_Boundary(calendar_system, "Календарь событий") {
+    Container(web_app, "Веб-приложение", "React SPA", "Пользовательский интерфейс: управление событиями, настройка напоминаний")
+    Container(api_gateway, "API Gateway", "Nginx / Kong", "Единая точка входа: маршрутизация, аутентификация, rate limiting")
+
+    Container(user_service, "User Service", "Python / FastAPI", "Регистрация, аутентификация (JWT), управление профилем пользователя")
+    Container(event_service, "Event Service", "Python / FastAPI", "CRUD событий и напоминаний, бизнес-логика календаря")
+    Container(scheduler_service, "Scheduler Service", "Python / Celery Beat", "Периодически проверяет наступившие напоминания и публикует задачи в очередь")
+    Container(notification_service, "Notification Service", "Python / FastAPI + Celery", "Обрабатывает задачи из очереди и доставляет уведомления через email и Telegram")
+
+    ContainerDb(postgres, "PostgreSQL", "Реляционная СУБД", "Хранит пользователей, события и напоминания")
+    ContainerDb(redis, "Redis", "Cache / Broker", "Кэш JWT-токенов и сессий; брокер задач для Celery Beat")
+    ContainerDb(rabbitmq, "RabbitMQ", "Message Broker", "Очередь сообщений для передачи задач уведомления между сервисами")
+}
+
+System_Ext(email_server, "Почтовый сервер (SMTP)", "Внешний SMTP-сервис для отправки email")
+System_Ext(telegram_api, "Telegram Bot API", "Внешний API мессенджера")
+
+Rel(user, web_app, "Использует браузер", "HTTPS")
+Rel(web_app, api_gateway, "REST API-запросы", "HTTPS / JSON")
+
+Rel(api_gateway, user_service, "Маршрутизирует /auth/* и /users/*", "HTTP / REST")
+Rel(api_gateway, event_service, "Маршрутизирует /events/* и /reminders/*", "HTTP / REST")
+
+Rel(user_service, postgres, "Читает/пишет данные пользователей", "TCP / SQL")
+Rel(user_service, redis, "Хранит и проверяет JWT-токены", "TCP")
+
+Rel(event_service, postgres, "Читает/пишет события и напоминания", "TCP / SQL")
+Rel(event_service, rabbitmq, "Публикует задачи при создании/изменении напоминания", "AMQP")
+
+Rel(scheduler_service, postgres, "Читает напоминания, у которых наступило время", "TCP / SQL")
+Rel(scheduler_service, rabbitmq, "Публикует задачи напоминания по расписанию", "AMQP")
+Rel(scheduler_service, redis, "Координация воркеров Celery Beat", "TCP")
+
+Rel(notification_service, rabbitmq, "Подписывается на задачи уведомлений", "AMQP")
+Rel(notification_service, email_server, "Отправляет email-уведомления", "SMTP/TLS")
+Rel(notification_service, telegram_api, "Отправляет Telegram-сообщения", "HTTPS")
+
+@enduml

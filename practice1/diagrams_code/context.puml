@@ -1,0 +1,19 @@
+@startuml C4_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Контекстная диаграмма — Календарь событий
+
+Person(user, "Пользователь", "Физическое лицо, создающее события и получающее напоминания")
+
+System(calendar_system, "Календарь событий", "Позволяет создавать события, настраивать напоминания и своевременно получать уведомления по email или через Telegram")
+
+System_Ext(email_server, "Почтовый сервер (SMTP)", "Внешний сервис для доставки email-уведомлений")
+System_Ext(telegram_api, "Telegram Bot API", "Внешний API мессенджера для доставки push-уведомлений")
+
+Rel(user, calendar_system, "Создаёт события, настраивает напоминания, просматривает календарь", "HTTPS")
+Rel(calendar_system, email_server, "Отправляет email-уведомления", "SMTP/TLS")
+Rel(calendar_system, telegram_api, "Отправляет Telegram-сообщения", "HTTPS / Bot API")
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml C4_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов — Event Service
+
+Container_Ext(api_gateway, "API Gateway", "Nginx / Kong", "Маршрутизирует входящие запросы к Event Service")
+ContainerDb_Ext(postgres, "PostgreSQL", "Реляционная СУБД", "Хранит события и напоминания")
+ContainerDb_Ext(rabbitmq, "RabbitMQ", "Message Broker", "Принимает задачи уведомлений")
+
+Container_Boundary(event_service, "Event Service") {
+    Component(auth_middleware, "Auth Middleware", "FastAPI Middleware", "Проверяет JWT-токен пользователя в каждом входящем запросе")
+
+    Component(event_router, "Event Router", "FastAPI APIRouter", "Обрабатывает HTTP-эндпоинты: POST/GET/PUT/DELETE /events")
+    Component(reminder_router, "Reminder Router", "FastAPI APIRouter", "Обрабатывает HTTP-эндпоинты: POST/GET/PUT/DELETE /reminders")
+
+    Component(event_logic, "EventService", "Python Service Class", "Бизнес-логика событий: валидация дат, создание, обновление, удаление")
+    Component(reminder_logic, "ReminderService", "Python Service Class", "Бизнес-логика напоминаний: создание, отмена, пересчёт времени срабатывания")
+
+    Component(event_repo, "EventRepository", "SQLAlchemy Repository", "Доступ к таблице events в PostgreSQL")
+    Component(reminder_repo, "ReminderRepository", "SQLAlchemy Repository", "Доступ к таблице reminders в PostgreSQL")
+
+    Component(message_publisher, "MessagePublisher", "aio-pika / Publisher", "Публикует сообщения о напоминаниях в очередь RabbitMQ")
+}
+
+Rel(api_gateway, auth_middleware, "Все входящие HTTP-запросы", "HTTP / JSON")
+Rel(auth_middleware, event_router, "Аутентифицированные запросы /events/*")
+Rel(auth_middleware, reminder_router, "Аутентифицированные запросы /reminders/*")
+
+Rel(event_router, event_logic, "Вызывает методы бизнес-логики событий")
+Rel(reminder_router, reminder_logic, "Вызывает методы бизнес-логики напоминаний")
+
+Rel(event_logic, event_repo, "Читает и сохраняет события")
+Rel(reminder_logic, reminder_repo, "Читает и сохраняет напоминания")
+Rel(reminder_logic, message_publisher, "Публикует задачу при создании / обновлении напоминания")
+
+Rel(event_repo, postgres, "SQL-запросы к таблице events", "TCP / SQLAlchemy ORM")
+Rel(reminder_repo, postgres, "SQL-запросы к таблице reminders", "TCP / SQLAlchemy ORM")
+Rel(message_publisher, rabbitmq, "Публикует JSON-сообщение с деталями напоминания", "AMQP")
+
+@enduml
