@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Kubernetes secrets
+practice3/k8s/secret.yaml
+
 # Python
 __pycache__/
 *.py[cod]

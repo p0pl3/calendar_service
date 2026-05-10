@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: calendar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: calendar/user-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8001
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/calendar_db"
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secret
+                  key: SECRET_KEY
+            - name: ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: ALGORITHM
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: ACCESS_TOKEN_EXPIRE_MINUTES
+            - name: SERVICE_PORT
+              value: "8001"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 40
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      terminationGracePeriodSeconds: 35
