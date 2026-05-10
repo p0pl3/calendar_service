@@ -130,9 +130,9 @@ Copy-Item practice3/k8s/secret.example.yaml practice3/k8s/secret.yaml
 
 ```yaml
 stringData:
-  SECRET_KEY: "replace-with-random-secret-key"   # любая случайная строка
+  SECRET_KEY: "replace-with-random-secret-key" # любая случайная строка
   SMTP_USER: "your-email@gmail.com"
-  SMTP_PASSWORD: "your-app-password"              # App Password из Google Account
+  SMTP_PASSWORD: "your-app-password" # App Password из Google Account
   SMTP_FROM: "Calendar Reminder<your-email@gmail.com>"
 ```
 
@@ -213,11 +213,11 @@ Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "127.0.0.1  mya
 
 После этого приложение доступно по `http://myapp.local` — Ingress-контроллер маршрутизирует запросы:
 
-| URL | Описание |
-|-----|----------|
-| `http://myapp.local/` | Frontend (React SPA) |
-| `http://myapp.local/auth/...` | API (аутентификация) |
-| `http://myapp.local/events/...` | API (события) |
+| URL                             | Описание             |
+| ------------------------------- | -------------------- |
+| `http://myapp.local/`           | Frontend (React SPA) |
+| `http://myapp.local/auth/...`   | API (аутентификация) |
+| `http://myapp.local/events/...` | API (события)        |
 
 ---
 
@@ -268,6 +268,7 @@ curl -X POST "$API/events/" `
 ```
 
 **Результаты реального smoke-теста в кластере:**
+
 ```
 GET  /health                → {"status":"ok","service":"api-gateway"}
 POST /auth/register         → 201, user created
@@ -329,21 +330,13 @@ minikube delete
 
 ![alt text](source/get_pods.png)
 
-### kubectl get hpa
+### Проверка запущенного приложения
 
-![alt text](source/get_hpa.png)
-
-### kubectl get pvc
-
-![alt text](source/get_pvc.png)
-
-### curl-запрос через Ingress
-
-<!-- Вставьте скриншот успешного curl-запроса к http://myapp.local/auth/register -->
+![alt text](source/app.png)
 
 ### Логи пода
 
-<!-- Вставьте скриншот вывода: kubectl -n calendar logs deployment/user-service -->
+![alt text](source/logs.png)
 
 ---
 
@@ -368,6 +361,8 @@ kubectl get pv
 
 ---
 
+![alt text](source/get_pvc.png)
+
 ## Horizontal Pod Autoscaler (HPA)
 
 **Файл:** [k8s/hpa.yaml](k8s/hpa.yaml)
@@ -391,40 +386,67 @@ kubectl -n calendar get hpa -w
 
 ---
 
+![alt text](source/get_hpa.png)
+
 ## Service Mesh (Linkerd)
 
 Namespace `calendar` аннотирован `linkerd.io/inject: enabled` ([k8s/namespace.yaml](k8s/namespace.yaml)) — это включает автоматическую инъекцию sidecar-прокси во все поды.
 
 ### Установка Linkerd
 
-```bash
-# Установить CLI
-curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
-export PATH=$PATH:$HOME/.linkerd2/bin
+**1. Установить CLI (Windows):**
 
-# Проверить совместимость кластера
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.linkerd2"
+$ver = "stable-2.14.10"
+Invoke-WebRequest -Uri "https://github.com/linkerd/linkerd2/releases/download/$ver/linkerd2-cli-$ver-windows.exe" `
+  -OutFile "$env:USERPROFILE\.linkerd2\linkerd.exe"
+# Добавить в PATH текущей сессии:
+$env:PATH += ";$env:USERPROFILE\.linkerd2"
+```
+
+**2. Проверить совместимость и установить:**
+
+```powershell
 linkerd check --pre
 
-# Установить CRD и control plane
+# CRD
 linkerd install --crds | kubectl apply -f -
-linkerd install | kubectl apply -f -
 
-# Дождаться готовности
+# Control plane (флаг обязателен для Minikube с Docker-драйвером)
+linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
+
 linkerd check
 ```
 
-После `kubectl apply -f k8s/` поды в namespace `calendar` автоматически получат sidecar `linkerd-proxy`. Для наблюдения за трафиком:
+**3. После `kubectl apply -f k8s/`** перезапустить поды чтобы injector добавил sidecar:
 
-```bash
-# Установить расширение Viz (дашборд)
+```powershell
+kubectl -n calendar rollout restart deployment --all
+kubectl -n calendar rollout restart statefulset/postgres
+```
+
+Поды должны показывать `2/2 READY` (приложение + linkerd-proxy).
+
+> **Важно:** сервисы PostgreSQL, Redis, RabbitMQ аннотированы `config.linkerd.io/opaque-ports` — это говорит Linkerd пропускать TCP-трафик этих протоколов без попытки разобрать его как HTTP.
+
+**4. Установить Viz (дашборд):**
+
+```powershell
 linkerd viz install | kubectl apply -f -
 linkerd viz check
+
+# Открыть дашборд
 linkerd viz dashboard
 ```
 
 Дашборд покажет: latency, success rate, RPS для каждого сервиса.
 
 ---
+
+скриншот
+
+![alt text](source/linkerd.png)
 
 ## GitOps (ArgoCD)
 
@@ -468,6 +490,8 @@ kubectl -n argocd get applications
 ```
 
 ---
+
+![alt text](source/agro.png)
 
 ## Структура манифестов
 

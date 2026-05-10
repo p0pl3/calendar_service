@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: redis
   namespace: calendar
+  annotations:
+    config.linkerd.io/opaque-ports: "6379"
 spec:
   selector:
     app: redis
