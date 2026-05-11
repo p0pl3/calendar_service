@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: notification-service
   namespace: calendar
+  labels:
+    monitoring: "true"
 spec:
   selector:
     app: notification-service
   ports:
-    - port: 8003
+    - name: http
+      port: 8003
       targetPort: 8003

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine
 from app.dependencies import set_redis
+from app.metrics import instrumentator
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
     global _redis_client
     _redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
     set_redis(_redis_client)
+    instrumentator.expose(app, include_in_schema=False)
     yield
     await _redis_client.aclose()
     await engine.dispose()
@@ -37,6 +39,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+instrumentator.instrument(app)
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(users_router, prefix="/users", tags=["users"])

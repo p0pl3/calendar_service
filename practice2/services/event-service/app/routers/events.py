@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user_id
 from app.schemas.event import EventCreate, EventRead, EventUpdate
+from app.metrics import EVENTS_CREATED_TOTAL
 from app.services.event_service import (
     create_event,
     delete_event,
@@ -22,7 +23,9 @@ async def create(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_event(data, user_id, db)
+    event = await create_event(data, user_id, db)
+    EVENTS_CREATED_TOTAL.inc()
+    return event
 
 
 @router.get("/", response_model=list[EventRead])

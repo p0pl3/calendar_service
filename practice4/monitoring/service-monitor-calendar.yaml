@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calendar-services
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - calendar
+  selector:
+    matchLabels:
+      monitoring: "true"
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user_id
 from app.schemas.reminder import ReminderCreate, ReminderRead, ReminderUpdate
+from app.metrics import REMINDERS_CREATED_TOTAL
 from app.services.reminder_service import (
     cancel_reminder,
     create_reminder,
@@ -24,7 +25,9 @@ async def create(
     token: str = Depends(_oauth2),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_reminder(data, user_id, db, token)
+    reminder = await create_reminder(data, user_id, db, token)
+    REMINDERS_CREATED_TOTAL.inc()
+    return reminder
 
 
 @router.get("/", response_model=list[ReminderRead])

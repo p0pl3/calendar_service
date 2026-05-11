@@ -7,6 +7,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_redis, oauth2_scheme
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserRead
+from app.metrics import USERS_ACTIVE_TOTAL, USERS_LOGGED_IN_TOTAL, USERS_REGISTERED_TOTAL
 from app.services.auth_service import (
     blacklist_token,
     create_access_token,
@@ -19,7 +20,9 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
-    return await create_user(data, db)
+    user = await create_user(data, db)
+    USERS_REGISTERED_TOTAL.inc()
+    return user
 
 
 @router.post("/login", response_model=Token)
@@ -33,6 +36,8 @@ async def login(
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
     token = create_access_token(user.id, user.email)
+    USERS_LOGGED_IN_TOTAL.inc()
+    USERS_ACTIVE_TOTAL.inc()
     return Token(access_token=token)
 
 

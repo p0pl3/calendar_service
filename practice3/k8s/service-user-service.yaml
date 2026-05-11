@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: user-service
   namespace: calendar
+  labels:
+    monitoring: "true"
 spec:
   selector:
     app: user-service
   ports:
-    - port: 8001
+    - name: http
+      port: 8001
       targetPort: 8001
