@@ -198,3 +198,7 @@ docker-compose up -d --build
 ```
 
 ![alt text](source/docker.png)
+
+## Swagger
+
+![alt text](source/swagger.png)
